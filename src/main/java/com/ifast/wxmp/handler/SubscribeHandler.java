@@ -29,7 +29,7 @@ import java.util.Map;
  * <p>
  * <small> 2018年6月13日 | Aron</small>
  */
-@Component
+//@Component
 public class SubscribeHandler extends AbstractHandler {
 
     @Autowired

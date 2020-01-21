@@ -2,8 +2,11 @@ package com.ifast.common.tags;
 
 import com.ifast.common.tags.processor.IftgSelectProcessor;
 import org.springframework.stereotype.Component;
+import org.thymeleaf.dialect.AbstractProcessorDialect;
 import org.thymeleaf.processor.IProcessor;
-import org.thymeleaf.spring4.dialect.SpringStandardDialect;
+import org.thymeleaf.standard.StandardDialect;
+import org.thymeleaf.standard.processor.StandardXmlNsTagProcessor;
+import org.thymeleaf.templatemode.TemplateMode;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -16,16 +19,24 @@ import java.util.Set;
  * @date:2018/8/22
  */
 @Component
-public class IftgDialectEntrance extends SpringStandardDialect {
-    public String getPrefix() {
-        return "iftg";
+public class IftgDialectEntrance extends AbstractProcessorDialect {
+    private static final String DIALECT_NAME = "IftgDialect";
+
+    private static final String PREFIX = "iftg";
+
+
+    public IftgDialectEntrance() {
+        super(DIALECT_NAME, PREFIX, StandardDialect.PROCESSOR_PRECEDENCE);
     }
 
     @Override
-    public Set<IProcessor> getProcessors() {
+    public Set<IProcessor> getProcessors(String dialectPrefix) {
         final Set<IProcessor> processors = new HashSet<IProcessor>();
-        //<iftg:select/> 注解
-        processors.add(new IftgSelectProcessor());
+        // <iftg:select/> 注解
+        processors.add(new IftgSelectProcessor(dialectPrefix));
+        // This will remove the xmlns:score attributes we might add for IDE validation
+        processors.add(new StandardXmlNsTagProcessor(TemplateMode.HTML, dialectPrefix));
+
         return processors;
     }
 }

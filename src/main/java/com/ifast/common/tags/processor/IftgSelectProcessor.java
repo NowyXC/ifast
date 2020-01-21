@@ -5,18 +5,17 @@ import com.ifast.common.tags.util.IftgUtil;
 import com.ifast.common.tags.vo.ValueVO;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.ApplicationContext;
-import org.thymeleaf.Arguments;
-import org.thymeleaf.dom.Attribute;
-import org.thymeleaf.dom.Element;
-import org.thymeleaf.dom.Node;
-import org.thymeleaf.dom.Text;
-import org.thymeleaf.processor.element.AbstractMarkupSubstitutionElementProcessor;
-import org.thymeleaf.spring4.context.SpringWebContext;
+import org.thymeleaf.context.ITemplateContext;
+import org.thymeleaf.model.IModel;
+import org.thymeleaf.model.IModelFactory;
+import org.thymeleaf.model.IOpenElementTag;
+import org.thymeleaf.model.IProcessableElementTag;
+import org.thymeleaf.processor.element.AbstractElementTagProcessor;
+import org.thymeleaf.processor.element.IElementTagStructureHandler;
+import org.thymeleaf.spring5.context.SpringContextUtils;
+import org.thymeleaf.templatemode.TemplateMode;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 
 /**
  * select 注解
@@ -36,55 +35,55 @@ import java.util.Objects;
  * @author: zet
  * @date:2018/8/22
  */
-public class IftgSelectProcessor extends AbstractMarkupSubstitutionElementProcessor {
+public class IftgSelectProcessor extends AbstractElementTagProcessor {
     private DictService dictService;
     private boolean firstLoad = true;
 
-    public IftgSelectProcessor() {
-        super("select");
+    private static final String ATTR_NAME = "select";
+    private static final int PRECEDENCE = 120;
+
+    public IftgSelectProcessor(final String dialectPrefix) {
+        super(TemplateMode.HTML, // This processor will apply only to HTML mode
+                dialectPrefix, // Prefix to be applied to name for matching
+                null, // No tag name: match any tag name
+                false, // No prefix to be applied to tag name
+                ATTR_NAME, // Name of the attribute that will be matched
+                true, // Apply dialect prefix to attribute name
+                PRECEDENCE // Precedence (inside dialect's precedence)
+        ); // Remove the matched attribute afterwards
     }
 
     /**
      * 核心处理
      *
-     * @param arguments thymeleaf 上下文对象
-     * @param element   当前节点对象
+     * @param context thymeleaf 上下文对象
+     * @param tag   当前节点对象
      * @return
      */
     @Override
-    protected List<Node> getMarkupSubstitutes(Arguments arguments, Element element) {
-        //初始化
-        init(arguments);
+    protected void doProcess(ITemplateContext context, IProcessableElementTag tag,
+                             IElementTagStructureHandler structureHandler) {
+        // 初始化
+        init(context);
+        // 获取值
+        String dicType = tag.getAttributeValue("dicType");// 字典类型
+        String defaultValue = tag.getAttributeValue("defaultValue");// 默认选中
 
-        //字典类型
-        String dicType = element.getAttributeValue("dicType");
-        //默认选中
-        String defaultValue = element.getAttributeValue("defaultValue");
-
-        //回显值
-        String thValue = IftgUtil.getTargetAttributeValue(arguments, element, "th:value");
+        String thValue = IftgUtil.getTargetAttributeValue(context, tag, "th:value");// 回显值
         String defaultSelect = StringUtils.isNoneBlank(thValue) ? thValue : defaultValue;
-        List<ValueVO> valueVos = IftgUtil.getValues(dictService, dicType, new String[]{defaultSelect});
-
-        //set 值
-        List<Node> nodes = null;
-
-        //创建对象
-        Element selectEle = createSelect(element.getAttributeMap(), valueVos);
-        nodes = new ArrayList<>();
-        nodes.add(selectEle);
-
-        return nodes;
+        List<ValueVO> valueVos = IftgUtil.getValues(dictService, dicType, new String[] { defaultSelect });
+        // 创建对象
+        createSelect(context, valueVos, structureHandler);
     }
 
     /**
      * 初始化
      *
-     * @param argument
+     * @param context
      */
-    private void init(Arguments argument) {
+    private void init(ITemplateContext context) {
         if (firstLoad) {
-            ApplicationContext appCtx = ((SpringWebContext) argument.getContext()).getApplicationContext();
+            ApplicationContext appCtx = SpringContextUtils.getApplicationContext((ITemplateContext) context);
             dictService = appCtx.getBean(DictService.class);
             firstLoad = false;
         }
@@ -92,47 +91,58 @@ public class IftgSelectProcessor extends AbstractMarkupSubstitutionElementProces
 
     /**
      * 创建select对象
-     *
-     * @param attributeMap select 属性值
      * @param options      下拉值
      * @return
+     *
+     * 		创建将替换自定义标签的DOM结构。 name将显示在“<span>”标签内, 因此必须首先创建, 然后必须向其中添加一个节点。
+     *
      */
-    private Element createSelect(Map<String, Attribute> attributeMap, List<ValueVO> options) {
-        Element selectEle = new Element("select");
-        Element optionEle = new Element("option");
-        optionEle.setAttribute("style", "display: none");
-        selectEle.addChild(optionEle);
+    private void createSelect(ITemplateContext context, List<ValueVO> options,
+                              IElementTagStructureHandler structureHandler) {
+        final IModelFactory modelFactory = context.getModelFactory();
 
-        //创建option
+        final IModel model = modelFactory.createModel();
+        model.add(modelFactory.createOpenElementTag("select"));
+        model.add(modelFactory.createOpenElementTag("option"));
+        model.add(modelFactory.createText("选择类别"));
+        model.add(modelFactory.createCloseElementTag("option"));
+
+        // 创建option
         for (ValueVO option : options) {
-            optionEle = new Element("option");
-            optionEle.setAttribute("value", option.getVlaue());
 
-            //默认选中
-            if (Objects.nonNull(option.getSelected())
-                    && option.getSelected()) {
-                optionEle.setAttribute("selected", "selected");
-            }
+            model.add(modelFactory.createOpenElementTag(String.format("option value='%s'", option.getVlaue())));
+            model.add(modelFactory.createText(option.getName()));
+            model.add(modelFactory.createCloseElementTag("option"));
+            IOpenElementTag el = modelFactory.createOpenElementTag("option");
 
-            optionEle.addChild(new Text(option.getName()));
-            selectEle.addChild(optionEle);
+//			optionEle = new Element("option");
+//			optionEle.setAttribute("value", option.getVlaue());
+//
+//			// 默认选中
+//			if (Objects.nonNull(option.getSelected()) && option.getSelected()) {
+//				optionEle.setAttribute("selected", "selected");
+//			}
+//
+//			optionEle.addChild(new Text(option.getName()));
+//			selectEle.addChild(optionEle);
         }
+        model.add(modelFactory.createCloseElementTag("select"));
 
+        // 创建属性
+//		if (Objects.nonNull(attributeMap)) {
+//			for (String mapKey : attributeMap.keySet()) {
+//				String key = mapKey;
+//				String value = attributeMap.get(key).getValue();
+//				selectEle.setAttribute(key, value);
+//			}
+//		}
 
-        //创建属性
-        if (Objects.nonNull(attributeMap)) {
-            for (String mapKey : attributeMap.keySet()) {
-                String key = mapKey;
-                String value = attributeMap.get(key).getValue();
-                selectEle.setAttribute(key, value);
-            }
-        }
+        /*
+         * 指示引擎用指定的模型替换整个元素。
+         */
+        structureHandler.replaceWith(model, false);
 
-        return selectEle;
+        // return selectEle;
     }
 
-    @Override
-    public int getPrecedence() {
-        return 1000;
-    }
 }

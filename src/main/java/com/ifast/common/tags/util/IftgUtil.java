@@ -3,9 +3,9 @@ package com.ifast.common.tags.util;
 import com.ifast.common.domain.DictDO;
 import com.ifast.common.service.DictService;
 import com.ifast.common.tags.vo.ValueVO;
-import org.thymeleaf.Arguments;
-import org.thymeleaf.Configuration;
-import org.thymeleaf.dom.Element;
+import org.thymeleaf.IEngineConfiguration;
+import org.thymeleaf.context.ITemplateContext;
+import org.thymeleaf.model.IProcessableElementTag;
 import org.thymeleaf.standard.expression.IStandardExpression;
 import org.thymeleaf.standard.expression.IStandardExpressionParser;
 import org.thymeleaf.standard.expression.StandardExpressions;
@@ -59,23 +59,16 @@ public class IftgUtil {
 
     /**
      * 获取标签对应值
-     * @param arguments     thymeleaf 上下文对象
+     * @param context     thymeleaf 上下文对象
      * @param element       当前节点对象
      * @param attributeName 属性名
      * @return 回显对象值
      */
-    public static List<String> getDataValues(Arguments arguments, Element element, String attributeName) {
-        String attributeValue = element.getAttributeValue(attributeName);
-        Configuration configuration = arguments.getConfiguration();
-        IStandardExpressionParser expressionParser = StandardExpressions.getExpressionParser(configuration);
-        IStandardExpression expression = null;
-        try {
-            expression = expressionParser.parseExpression(configuration, arguments, attributeValue);
-        } catch (Exception e) {
-            return null;
-        }
+    public static List<String> getDataValues(ITemplateContext context, IProcessableElementTag element, String attributeName) {
+        IStandardExpression expression = getExpression(context, element, attributeName);
         List<String> resp = new ArrayList<>();
-        Object result = expression.execute(configuration, arguments);
+        if(expression == null) return resp;
+        Object result = expression.execute(context);
         if (Objects.nonNull(result)
                 && !(result instanceof String)) {
             resp = (List<String>) (result);
@@ -92,24 +85,29 @@ public class IftgUtil {
 
     /**
      * 获取option 的值
-     * @param arguments     thymeleaf 上下文对象
+     * @param context     thymeleaf 上下文对象
      * @param element       当前节点对象
      * @param attributeName 属性名
      * @return 标签对象值
      */
-    public static String getTargetAttributeValue(Arguments arguments, Element element, String attributeName) {
+    public static String getTargetAttributeValue(ITemplateContext context, IProcessableElementTag element, String attributeName) {
+        IStandardExpression expression = getExpression(context, element, attributeName);
+        if(expression == null) return "";
+        Object result = expression.execute(context);
+        return result == null ? "" : result.toString();
+
+    }
+
+
+    private static IStandardExpression getExpression(ITemplateContext context, IProcessableElementTag element, String attributeName){
         String attributeValue = element.getAttributeValue(attributeName);
-        Configuration configuration = arguments.getConfiguration();
+        IEngineConfiguration configuration = context.getConfiguration();
         IStandardExpressionParser expressionParser = StandardExpressions.getExpressionParser(configuration);
-        IStandardExpression expression = null;
         try {
-            expression = expressionParser.parseExpression(configuration, arguments, attributeValue);
+            return expressionParser.parseExpression(context, attributeValue);
         } catch (Exception e) {
             return null;
         }
-        Object result = expression.execute(configuration, arguments);
-        return result == null ? "" : result.toString();
-
     }
 
 
@@ -160,4 +158,5 @@ public class IftgUtil {
         }
         return valueVos;
     }
+
 }

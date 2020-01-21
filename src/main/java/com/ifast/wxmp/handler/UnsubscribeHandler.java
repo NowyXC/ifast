@@ -20,7 +20,7 @@ import java.util.Map;
  * 
  * <small> 2018年6月13日 | Aron</small>
  */
-@Component
+//@Component
 public class UnsubscribeHandler extends AbstractHandler {
 
     

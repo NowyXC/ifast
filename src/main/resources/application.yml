@@ -1,17 +1,13 @@
-banner:
-  location: config/banner.txt
-  encoding: utf-8
 server:
-  context-path: /
-  session-timeout: 1800
   tomcat:
+    uri-encoding: utf-8
     max-threads: 1000
     min-spare-threads: 30
   port: 8888
-  uri-encoding: utf-8
-security:
-  basic:
-    enabled: false
+  servlet:
+    context-path: /
+    session:
+      timeout: 1800
 spring:
   thymeleaf:
     mode: LEGACYHTML5
@@ -20,18 +16,21 @@ spring:
     time-zone: GMT+8
     date-format: yyyy-MM-dd HH:mm:ss
     generator:
-      WRITE_NUMBERS_AS_STRINGS: true    
+      WRITE_NUMBERS_AS_STRINGS: true
   profiles:
     active: dev
-  http:
-    multipart:
-      max-file-size: 30Mb
-      max-request-size: 30Mb
   redis:
-#    host: 127.0.0.1
+  #    host: 127.0.0.1
   devtools:
     restart:
       enabled: true
+  banner:
+    location: config/banner.txt
+    charset: utf-8
+  servlet:
+    multipart:
+      max-file-size: 30MB
+      max-request-size: 30MB
 mybatis-plus:
   mapper-locations: classpath:/mapper/**/*Mapper.xml
   typeAliasesPackage: com.ifast.**.domain

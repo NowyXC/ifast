@@ -63,11 +63,11 @@ public class WeixinService extends WxMpServiceImpl implements InitializingBean {
     @Autowired
     private MsgHandler msgHandler;
 
-    @Autowired
-    private UnsubscribeHandler unsubscribeHandler;
-
-    @Autowired
-    private SubscribeHandler subscribeHandler;
+//    @Autowired
+//    private UnsubscribeHandler unsubscribeHandler;
+//
+//    @Autowired
+//    private SubscribeHandler subscribeHandler;
 
     private WxMpMessageRouter router;
 
@@ -93,13 +93,13 @@ public class WeixinService extends WxMpServiceImpl implements InitializingBean {
         newRouter.rule().async(false).msgType(WxConsts.XmlMsgType.EVENT).event(WxConsts.MenuButtonType.VIEW)
                 .handler(this.nullHandler).end();
 
-        // 关注事件
-        newRouter.rule().async(false).msgType(WxConsts.XmlMsgType.EVENT).event(WxConsts.EventType.SUBSCRIBE)
-                .handler(this.getSubscribeHandler()).end();
-
-        // 取消关注事件
-        newRouter.rule().async(false).msgType(WxConsts.XmlMsgType.EVENT).event(WxConsts.EventType.UNSUBSCRIBE)
-                .handler(this.getUnsubscribeHandler()).end();
+//        // 关注事件
+//        newRouter.rule().async(false).msgType(WxConsts.XmlMsgType.EVENT).event(WxConsts.EventType.SUBSCRIBE)
+//                .handler(this.getSubscribeHandler()).end();
+//
+//        // 取消关注事件
+//        newRouter.rule().async(false).msgType(WxConsts.XmlMsgType.EVENT).event(WxConsts.EventType.UNSUBSCRIBE)
+//                .handler(this.getUnsubscribeHandler()).end();
 
         // 上报地理位置事件
         newRouter.rule().async(false).msgType(WxConsts.XmlMsgType.LOCATION).event(WxConsts.EventType.LOCATION)
@@ -143,13 +143,13 @@ public class WeixinService extends WxMpServiceImpl implements InitializingBean {
         return this.menuHandler;
     }
 
-    protected SubscribeHandler getSubscribeHandler() {
-        return this.subscribeHandler;
-    }
-
-    protected UnsubscribeHandler getUnsubscribeHandler() {
-        return this.unsubscribeHandler;
-    }
+//    protected SubscribeHandler getSubscribeHandler() {
+//        return this.subscribeHandler;
+//    }
+//
+//    protected UnsubscribeHandler getUnsubscribeHandler() {
+//        return this.unsubscribeHandler;
+//    }
 
     protected AbstractHandler getLocationHandler() {
         return this.locationHandler;
