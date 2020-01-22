@@ -13,7 +13,6 @@ import com.ifast.sys.domain.UserDO;
 import com.ifast.sys.service.RoleService;
 import com.ifast.sys.service.UserService;
 import com.ifast.sys.vo.UserVO;
-import org.apache.catalina.servlet4preview.http.HttpServletRequest;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -21,6 +20,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -53,7 +53,8 @@ public class UserController extends BaseController {
     @ResponseBody
     public Result<Page<UserDO>> list(UserDO userDTO) {
         // 查询列表数据
-        Page<UserDO> page = userService.selectPage(getPage(UserDO.class), userService.convertToEntityWrapper("name", userDTO.getName(), "deptId", userDTO.getDeptId()));
+        Page<UserDO> page = userService.selectPage(getPage(UserDO.class),
+                userService.convertToEntityWrapper("name", userDTO.getName(), "deptId", userDTO.getDeptId()));
         return Result.ok(page);
     }
 

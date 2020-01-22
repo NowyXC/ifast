@@ -1,5 +1,6 @@
 package com.ifast.sys.shiro;
 
+import com.ifast.common.utils.PasswdUtils;
 import com.ifast.common.utils.ShiroUtils;
 import com.ifast.sys.domain.UserDO;
 import com.ifast.sys.service.MenuService;
@@ -67,6 +68,7 @@ public class SysUserAuthorizingRealm extends AuthorizingRealm {
 
         // 查询用户信息
         UserDO user = userService.findOneByKv("username", username);
+
         // 账号不存在
         if (user == null) {
             throw new UnknownAccountException("账号或密码不正确");
@@ -75,9 +77,8 @@ public class SysUserAuthorizingRealm extends AuthorizingRealm {
         if (user.getStatus() == 0) {
             throw new LockedAccountException("账号已被锁定,请联系管理员");
         }
-
         ByteSource salt = new Sha256Hash(user.getSalt());
-
+        String pad = PasswdUtils.get("1","admin");
         return new SimpleAuthenticationInfo(user, user.getPassword(), salt, getName());
     }
 

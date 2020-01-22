@@ -1,6 +1,6 @@
 ifast:
   projectName: ifast
-  projectRootURL: http://127.0.0.1:${server.port}/
+  projectRootURL: http://localhost:${server.port}/
   demoMode: false
   devMode: true
   tempDir: /Users/Aron/dev_projects/idea/ifast/temp/
@@ -56,11 +56,11 @@ spring:
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     driverClassName: com.mysql.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3306/ifast-new2?useUnicode=true&useSSL=false
+    url: jdbc:mysql://127.0.0.1:3306/ifast_db?useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai
     # 推荐utf8mb4编码以便支持表情字符，sys_log记录系统数据变动需要支持utf8mb4
     connectionInitSqls: SET NAMES utf8mb4;
     username: root
-    password: aron
+    password: root
     initialSize: 1
     minIdle: 3
     maxActive: 20
