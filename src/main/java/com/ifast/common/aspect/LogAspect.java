@@ -43,6 +43,7 @@ public class LogAspect {
 
     private LogDao logMapper;
 
+    /** 匹配持有Log注解的方法 */
     @Pointcut("@annotation(com.ifast.common.annotation.Log)")
     public void logPointCut() {
     }
@@ -92,7 +93,8 @@ public class LogAspect {
     	log.info("result({}) {}", time, result instanceof Serializable ? JSONUtils.beanToJson(result) : result);
     	return result;
     }
-    
+
+    /** BaseMapper类型或者其子类 */
     @Pointcut("within(com.baomidou.mybatisplus.mapper.BaseMapper+)")
     public void logMapper(){}
     

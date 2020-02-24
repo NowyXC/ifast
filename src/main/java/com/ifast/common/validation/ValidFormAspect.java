@@ -26,10 +26,11 @@ public class ValidFormAspect {
 
     @Around("validFormAspect()")
     public Object around(ProceedingJoinPoint point) throws Throwable {
-        Object[] args = point.getArgs();
-        for(Object arg : args){
+        // point.getTarget().getClass().getName() 获取调用者
+        Object[] args = point.getArgs();//获取传参
+        for(Object arg : args){//判断参数对象是否添加了ValidForm注解
             ValidForm validForm = arg.getClass().getAnnotation(ValidForm.class);
-            if(validForm != null){
+            if(validForm != null){//处理对象中的validator,存在异常则抛出
                 ValidationResult validationResult = ValidateUtils.validateEntity(arg);
                 if(validationResult.isHasErrors()){
                     throw new IllegalArgumentException(validationResult.toString());
@@ -39,8 +40,4 @@ public class ValidFormAspect {
         Object result = point.proceed();
         return result;
     }
-
-
-    
-
 }

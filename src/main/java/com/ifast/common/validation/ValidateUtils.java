@@ -19,6 +19,9 @@ public class ValidateUtils {
 
     private static Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
+    /**
+     * 验证对象中的 Validator
+     */
     public static <T> ValidationResult validateEntity(T obj) {
         ValidationResult result = new ValidationResult();
         Set<ConstraintViolation<T>> set = validator.validate(obj, Default.class);
@@ -33,6 +36,9 @@ public class ValidateUtils {
         return result;
     }
 
+    /**
+     * 验证对象中指定属性的Validator
+     */
     public static <T> ValidationResult validateProperty(T obj, String propertyName) {
         ValidationResult result = new ValidationResult();
         Set<ConstraintViolation<T>> set = validator.validateProperty(obj, propertyName, Default.class);
@@ -50,5 +56,4 @@ public class ValidateUtils {
     private static boolean isNotEmpty(Collection<?> c) {
         return (c != null) && (!c.isEmpty());
     }
-
 }

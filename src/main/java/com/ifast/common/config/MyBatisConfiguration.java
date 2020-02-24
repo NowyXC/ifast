@@ -73,6 +73,7 @@ public class MyBatisConfiguration {
         return paginationInterceptor;
     }
 
+    //乐观锁支持
     @Bean
     public OptimisticLockerInterceptor optimisticLockerInterceptor() {
     	return new OptimisticLockerInterceptor();
