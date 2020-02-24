@@ -42,6 +42,7 @@ public class CacheConfiguration {
 		return cacheManagerFactoryBean;
 	}
 
+	/** 不存在则自动创建name的缓存 */
     @Bean
     @ConditionalOnBean(EhCacheManagerFactoryBean.class)
     public EhCacheCacheManager ehCacheCacheManager(EhCacheManagerFactoryBean ehCacheManagerFactoryBean) {
