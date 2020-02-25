@@ -2,6 +2,7 @@ package com.ifast;
 
 import com.ifast.common.config.IFastProperties;
 import com.ifast.common.utils.SpringContextHolder;
+import com.ifast.sys.config.SwaggerProperties;
 import org.mybatis.spring.annotation.MapperScan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,11 +43,14 @@ public class Application {
 		ServerProperties serverProperties = SpringContextHolder.getApplicationContext().getBean(ServerProperties.class);
 		DataSourceProperties dataSourceProperties = SpringContextHolder.getApplicationContext().getBean(DataSourceProperties.class);
 		IFastProperties config = SpringContextHolder.getApplicationContext().getBean(IFastProperties.class);
+
+		SwaggerProperties swaggerProperties = SpringContextHolder.getApplicationContext().getBean(SwaggerProperties.class);
 		log.info("开启演示模式：{}", config.isDemoMode());
 		log.info("开启调试模式：{}", config.isDevMode());
 		log.info("数据库：{}", dataSourceProperties.getUrl());
 		log.info("==================> run at http://localhost:{}  <==================", serverProperties.getPort()
 				+  serverProperties.getServlet().getContextPath());
+		log.info("API接口文档：{}", swaggerProperties.getTermsOfServiceUrl());
 	}
 	
 }
