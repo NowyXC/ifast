@@ -14,7 +14,6 @@ public abstract class PasswdUtils {
     public final static String ALGORITHM = Sha256Hash.ALGORITHM_NAME;
 
     public static String get(String passwd, String salt) {
-
         return new Sha256Hash(passwd, hash(salt)).toString();
     }
 

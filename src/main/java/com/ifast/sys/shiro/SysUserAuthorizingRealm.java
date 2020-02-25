@@ -15,6 +15,7 @@ import org.apache.shiro.crypto.hash.Sha256Hash;
 import org.apache.shiro.realm.AuthorizingRealm;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.util.ByteSource;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -30,8 +31,11 @@ import java.util.Set;
 @AllArgsConstructor
 public class SysUserAuthorizingRealm extends AuthorizingRealm {
 
+    @Autowired
     private final MenuService menuService;
+    @Autowired
     private final RoleService roleService;
+    @Autowired
     private final UserService userService;
 
     @Override
