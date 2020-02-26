@@ -128,7 +128,8 @@ public class JWTUtil {
      */
     public static String sign(String userId, String secret, long expire) {
         try {
-            Date date = new Date(System.currentTimeMillis() + expire);
+            Date now = Calendar.getInstance().getTime();
+            Date date = new Date(now.getTime() + expire);
             Algorithm algorithm = Algorithm.HMAC256(secret);
             return JWT.create().withClaim(userPrimaryKey, userId).withExpiresAt(date).sign(algorithm);
         } catch (UnsupportedEncodingException e) {

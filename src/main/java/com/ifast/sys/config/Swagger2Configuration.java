@@ -27,14 +27,21 @@ public class Swagger2Configuration {
         int s = projectRootURL == null ? -1 : projectRootURL.indexOf("//");
         int e = s == -1 ? -1 : projectRootURL.indexOf('/', s + 2);
         String host = s == -1 ? null : projectRootURL.substring(s + 2, e == -1 ? projectRootURL.length() : e);
-        return new Docket(DocumentationType.SWAGGER_2).host(host).apiInfo(apiInfo()).select()
-                .apis(RequestHandlerSelectors.basePackage(swaggerProperties.getBasePackage())).paths(path -> path.startsWith("/api/") || path.startsWith("/demo/") | path.startsWith("/test/")).build();
+        return new Docket(DocumentationType.SWAGGER_2)
+                .host(host)
+                .apiInfo(apiInfo()).select()
+                .apis(RequestHandlerSelectors
+                         .basePackage(swaggerProperties.getBasePackage()))
+                         //设置只有 api 、demo、test下的controller会被显示
+                         .paths(path -> path.startsWith("/api/") || path.startsWith("/demo/") | path.startsWith("/test/"))
+                .build();
     }
 
     private ApiInfo apiInfo() {
         return new ApiInfoBuilder()
                 .title(swaggerProperties.getTitle())
-                .contact(new Contact(swaggerProperties.getContactName(), swaggerProperties.getContactUrl(), swaggerProperties.getContactEmail()))
+                .contact(new Contact(swaggerProperties.getContactName(),
+                        swaggerProperties.getContactUrl(), swaggerProperties.getContactEmail()))
                 .version(swaggerProperties.getVersion())
                 .description(swaggerProperties.getDescription())
                 .termsOfServiceUrl(swaggerProperties.getTermsOfServiceUrl()).build();

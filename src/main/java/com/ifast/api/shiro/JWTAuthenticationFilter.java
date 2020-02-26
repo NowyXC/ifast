@@ -1,5 +1,6 @@
 package com.ifast.api.shiro;
 
+import com.auth0.jwt.JWT;
 import com.ifast.api.service.impl.AppUserServiceImpl;
 import com.ifast.api.util.JWTUtil;
 import com.ifast.common.type.EnumErrorCode;
@@ -14,6 +15,8 @@ import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.web.filter.authc.AuthenticatingFilter;
 import org.apache.shiro.web.util.WebUtils;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
@@ -21,6 +24,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Objects;
 
 
@@ -69,7 +74,6 @@ public class JWTAuthenticationFilter extends AuthenticatingFilter {
 
     @Override
     protected AuthenticationToken createToken(ServletRequest request, ServletResponse response) {
-
         String jwt = WebUtils.toHttp(request).getHeader(HEADER_AUTHORIZATION);
         if (StringUtils.isNotBlank(jwt) && !JWTUtil.isTokenExpired(jwt)) {
             return new JWTAuthenticationTokenToken(jwt);
@@ -123,6 +127,8 @@ public class JWTAuthenticationFilter extends AuthenticatingFilter {
         log.error("Validate token fail, token:{}, error:{}", token.toString(), e.getMessage());
         return false;
     }
+
+
 
     protected void fillCorsHeader(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
         httpServletResponse.setHeader("Access-control-Allow-Origin", httpServletRequest.getHeader("Origin"));

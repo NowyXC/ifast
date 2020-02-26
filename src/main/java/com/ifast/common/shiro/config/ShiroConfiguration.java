@@ -47,16 +47,18 @@ import java.util.*;
  */
 @Configuration
 public class ShiroConfiguration {
-    
+
+
     @Bean
-    SessionDAO sessionDAO(ShiroProperties config) {
+    SessionDAO sessionDAO(ShiroProperties config) {//自定义sessionDAO
         RedisSessionDAO sessionDAO = new RedisSessionDAO(config.getSessionKeyPrefix());
         return sessionDAO;
     }
 
+    //自定义会话Cookie模板
     @Bean
     public SimpleCookie sessionIdCookie(ShiroProperties shiroConfigProperties) {
-        return new SimpleCookie(shiroConfigProperties.getJsessionidKey());
+        return new SimpleCookie(shiroConfigProperties.getJsessionidKey());//声明cooike中session的名称
     }
 
     @Bean
@@ -67,18 +69,30 @@ public class ShiroConfiguration {
         return template;
     }
 
+
+    /**
+     * shiro session的管理
+     */
     @Bean
     public SessionManager sessionManager(SessionDAO sessionDAO, SimpleCookie simpleCookie) {
         DefaultWebSessionManager sessionManager = new DefaultWebSessionManager();
         sessionManager.setSessionIdCookie(simpleCookie);
 
         Collection<SessionListener> sessionListeners = new ArrayList<>();
-        sessionListeners.add(new BDSessionListener());
+        sessionListeners.add(new BDSessionListener());//session数量监听
         sessionManager.setSessionListeners(sessionListeners);
         sessionManager.setSessionDAO(sessionDAO);
         return sessionManager;
     }
-    
+
+    /**
+     * shiroCacheManager 缓存管理器
+     * 先加载{"springContextHolder","cacheConfiguration"}，再加载shiroCacheManager
+     * 主要为了通过cacheConfiguration获取缓存配置
+     *      1.默认ehcache
+     *      2.如果配置spring.redis.host 则使用redis
+     * @return CacheManager缓存管理器
+     */
     @Bean(name="shiroCacheManager")
     @DependsOn({"springContextHolder","cacheConfiguration"})
     public CacheManager cacheManager() {
@@ -88,6 +102,7 @@ public class ShiroConfiguration {
         return springCacheManager;
     }
 
+    //jwt的realm（安全数据库）
     @Bean
     JWTAuthorizingRealm jwtAuthorizingRealm(MenuService menuService, RoleService roleService){
         JWTAuthorizingRealm realm = new JWTAuthorizingRealm(menuService, roleService);
@@ -96,6 +111,7 @@ public class ShiroConfiguration {
         return realm;
     }
 
+    //系统用户授权的realm（安全数据库）
     @Bean
     SysUserAuthorizingRealm sysUserAuthorizingRealm(MenuService menuService, RoleService roleService, UserService userService){
         SysUserAuthorizingRealm realm = new SysUserAuthorizingRealm(menuService, roleService, userService);
@@ -108,11 +124,16 @@ public class ShiroConfiguration {
     }
 
 
+    //配置安全管理器
     @Bean
     SecurityManager securityManager(SessionManager sessionManager , CacheManager cacheManager, JWTAuthorizingRealm realm1, SysUserAuthorizingRealm realm2) {
+        //使用默认的安全管理器
         DefaultWebSecurityManager manager = new DefaultWebSecurityManager();
+        // 自定义缓存实现,默认采用ehcache，存在redis则用redis
         manager.setCacheManager(cacheManager);
+        //将自定义的realm交给安全管理器统一调度管理
         manager.setRealms(Arrays.asList(realm1, realm2));
+        // 自定义session管理
         manager.setSessionManager(sessionManager);
         return manager;
     }
@@ -121,7 +142,7 @@ public class ShiroConfiguration {
     ShiroFilterFactoryBean shiroFilterFactoryBean(SecurityManager securityManager, UserService userService) {
         ShiroFilterFactoryBean shiroFilterFactoryBean = new ShiroFilterFactoryBean();
         
-        // 添加jwt过滤器
+        // 添加jwt过滤器，/api/** 相关路径直接走jwt过滤器
         Map<String, Filter> filterMap = new HashMap<>();
         filterMap.put("jwt", new JWTAuthenticationFilter(userService, "/api/user/login"));
         shiroFilterFactoryBean.setFilters(filterMap);
@@ -130,6 +151,8 @@ public class ShiroConfiguration {
         shiroFilterFactoryBean.setLoginUrl("/login");
         shiroFilterFactoryBean.setSuccessUrl("/index");
         shiroFilterFactoryBean.setUnauthorizedUrl("/shiro/405");
+
+
         LinkedHashMap<String, String> filterChainDefinitionMap = new LinkedHashMap<>();
         // 微信对接
         filterChainDefinitionMap.put("/wx/mp/msg/**", "anon");
@@ -163,11 +186,13 @@ public class ShiroConfiguration {
         return shiroFilterFactoryBean;
     }
 
+    //管理shiro bean生命周期
     @Bean
     public LifecycleBeanPostProcessor lifecycleBeanPostProcessor() {
         return new LifecycleBeanPostProcessor();
     }
 
+    //处理注解不生效问题
     @Bean
     public DefaultAdvisorAutoProxyCreator defaultAdvisorAutoProxyCreator() {
         DefaultAdvisorAutoProxyCreator proxyCreator = new DefaultAdvisorAutoProxyCreator();
@@ -175,11 +200,13 @@ public class ShiroConfiguration {
         return proxyCreator;
     }
 
+    //配置前台thymeleaf标签
     @Bean
     public ShiroDialect shiroDialect() {
         return new ShiroDialect();
     }
 
+    //配置shiro注解支持
     @Bean
     public AuthorizationAttributeSourceAdvisor authorizationAttributeSourceAdvisor(SecurityManager securityManager) {
         AuthorizationAttributeSourceAdvisor authorizationAttributeSourceAdvisor = new AuthorizationAttributeSourceAdvisor();

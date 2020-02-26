@@ -1083,7 +1083,445 @@ public static class Holder {
 
 ### 5.Swagger2
 
+本项目采用的是`swagger2`+`swagger-bootstrap-ui`
+
+所以导入依赖为：
+
+```xml
+<!-- swagger -->
+<dependency>
+   <groupId>io.springfox</groupId>
+   <artifactId>springfox-swagger2</artifactId>
+   <version>2.9.2</version>
+</dependency>
+<dependency>
+   <groupId>com.github.xiaoymin</groupId>
+   <artifactId>swagger-bootstrap-ui</artifactId>
+   <version>1.8.2</version>
+</dependency>
+<dependency>
+   <groupId>io.springfox</groupId>
+   <artifactId>springfox-swagger-ui</artifactId>
+   <version>2.9.2</version>
+</dependency>
+```
+
+
+
+**Swagger2的核心配置**
+
+```java
+@EnableSwagger2
+@Configuration
+public class Swagger2Configuration {
+
+    @Autowired
+    IFastProperties ifastConfig;
+    @Autowired
+    SwaggerProperties swaggerProperties;
+
+    @Bean
+    public Docket createRestApi() {
+        String projectRootURL = ifastConfig.getProjectRootURL();
+        int s = projectRootURL == null ? -1 : projectRootURL.indexOf("//");
+        int e = s == -1 ? -1 : projectRootURL.indexOf('/', s + 2);
+        String host = s == -1 ? null : projectRootURL.substring(s + 2, e == -1 ? projectRootURL.length() : e);
+        return new Docket(DocumentationType.SWAGGER_2)
+                .host(host)
+                .apiInfo(apiInfo()).select()
+                .apis(RequestHandlerSelectors
+                         .basePackage(swaggerProperties.getBasePackage()))
+                         //设置只有 api 、demo、test下的controller会被显示
+                         .paths(path -> path.startsWith("/api/") || path.startsWith("/demo/") | path.startsWith("/test/"))
+                .build();
+    }
+
+    private ApiInfo apiInfo() {
+        return new ApiInfoBuilder()
+                .title(swaggerProperties.getTitle())
+                .contact(new Contact(swaggerProperties.getContactName(),
+                        swaggerProperties.getContactUrl(), swaggerProperties.getContactEmail()))
+                .version(swaggerProperties.getVersion())
+                .description(swaggerProperties.getDescription())
+                .termsOfServiceUrl(swaggerProperties.getTermsOfServiceUrl()).build();
+    }
+}
+```
+
+开启swagger2需要配置`@EnableSwagger2`和注入`Docket`对象。
+
+
+
+
+
 ### 6.Shiro使用
+
+```xml
+<!--shiro -->
+<dependency>
+   <groupId>org.apache.shiro</groupId>
+   <artifactId>shiro-core</artifactId>
+   <version>1.3.2</version>
+</dependency>
+<dependency>
+   <groupId>org.apache.shiro</groupId>
+   <artifactId>shiro-spring</artifactId>
+   <version>1.3.2</version>
+</dependency>
+
+<!-- shiro ehcache -->
+<dependency>
+	<groupId>org.apache.shiro</groupId>
+	<artifactId>shiro-ehcache</artifactId>
+	<version>1.3.2</version>
+</dependency>
+<dependency>
+	<groupId>com.github.theborakompanioni</groupId>
+	<artifactId>thymeleaf-extras-shiro</artifactId>
+	<version>2.0.0</version>
+</dependency>
+```
+
+注意此处使用了[ehcache](#4.缓存配置CacheConfiguration)缓存，如果只使用redis作为缓存数据库可以引入：
+
+```xml
+<dependency>
+   <groupId>org.springframework.boot</groupId>
+   <artifactId>spring-boot-starter-data-jpa</artifactId>
+</dependency>
+<!--shiro与redis整合-->
+<dependency>
+	<groupId>org.crazycake</groupId>
+	<artifactId>shiro-redis</artifactId>
+	<version>3.0.0</version>
+</dependency>
+```
+
+
+
+**Shiro主要配置类**
+
+```java
+获取yml中的配置属性
+@Component
+@ConfigurationProperties(prefix = "ifast.shiro")
+@Data
+public class ShiroProperties {
+    private String sessionKeyPrefix = "ifast:session";
+    private String jsessionidKey = "SESSION";
+}
+
+
+
+/**
+ * <pre>
+ * . cache ehcache
+ * . realm(cache)
+ * . securityManager（realm）
+ * . ShiroFilterFactoryBean 注册
+ * 
+ * </pre>
+ * <small> 2018年4月18日 | Aron</small>
+ */
+@Configuration
+public class ShiroConfiguration {
+
+
+    @Bean
+    SessionDAO sessionDAO(ShiroProperties config) {//自定义sessionDAO
+        RedisSessionDAO sessionDAO = new RedisSessionDAO(config.getSessionKeyPrefix());
+        return sessionDAO;
+    }
+
+    //自定义会话Cookie模板
+    @Bean
+    public SimpleCookie sessionIdCookie(ShiroProperties shiroConfigProperties) {
+        return new SimpleCookie(shiroConfigProperties.getJsessionidKey());//声明cooike中session的名称
+    }
+
+    @Bean
+    public RedisTemplate<Object, Object> redisTemplate( RedisConnectionFactory redisConnectionFactory) {
+        RedisTemplate<Object, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(redisConnectionFactory);
+        template.setKeySerializer(new StringRedisSerializer());
+        return template;
+    }
+
+
+    /**
+     * shiro session的管理
+     */
+    @Bean
+    public SessionManager sessionManager(SessionDAO sessionDAO, SimpleCookie simpleCookie) {
+        DefaultWebSessionManager sessionManager = new DefaultWebSessionManager();
+        sessionManager.setSessionIdCookie(simpleCookie);
+
+        Collection<SessionListener> sessionListeners = new ArrayList<>();
+        sessionListeners.add(new BDSessionListener());//session数量监听
+        sessionManager.setSessionListeners(sessionListeners);
+        sessionManager.setSessionDAO(sessionDAO);
+        return sessionManager;
+    }
+
+    /**
+     * shiroCacheManager 缓存管理器
+     * 先加载{"springContextHolder","cacheConfiguration"}，再加载shiroCacheManager
+     * 主要为了通过cacheConfiguration获取缓存配置
+     *      1.默认ehcache
+     *      2.如果配置spring.redis.host 则使用redis
+     * @return CacheManager缓存管理器
+     */
+    @Bean(name="shiroCacheManager")
+    @DependsOn({"springContextHolder","cacheConfiguration"})
+    public CacheManager cacheManager() {
+       SpringCacheManagerWrapper springCacheManager = new SpringCacheManagerWrapper();
+       org.springframework.cache.CacheManager cacheManager = SpringContextHolder.getBean(org.springframework.cache.CacheManager.class);
+       springCacheManager.setCacheManager(cacheManager);
+        return springCacheManager;
+    }
+
+    //jwt的realm（安全数据库）
+    @Bean
+    JWTAuthorizingRealm jwtAuthorizingRealm(MenuService menuService, RoleService roleService){
+        JWTAuthorizingRealm realm = new JWTAuthorizingRealm(menuService, roleService);
+        realm.setCachingEnabled(true);
+        realm.setAuthorizationCachingEnabled(true);
+        return realm;
+    }
+
+    //系统用户授权的realm（安全数据库）
+    @Bean
+    SysUserAuthorizingRealm sysUserAuthorizingRealm(MenuService menuService, RoleService roleService, UserService userService){
+        SysUserAuthorizingRealm realm = new SysUserAuthorizingRealm(menuService, roleService, userService);
+        HashedCredentialsMatcher credentialsMatcher = new HashedCredentialsMatcher();
+        credentialsMatcher.setHashAlgorithmName(Sha256Hash.ALGORITHM_NAME);
+        realm.setCredentialsMatcher(credentialsMatcher);
+        realm.setCachingEnabled(true);
+        realm.setAuthorizationCachingEnabled(true);
+        return realm;
+    }
+
+
+    //配置安全管理器
+    @Bean
+    SecurityManager securityManager(SessionManager sessionManager , CacheManager cacheManager, JWTAuthorizingRealm realm1, SysUserAuthorizingRealm realm2) {
+        //使用默认的安全管理器
+        DefaultWebSecurityManager manager = new DefaultWebSecurityManager();
+        // 自定义缓存实现,默认采用ehcache，存在redis则用redis
+        manager.setCacheManager(cacheManager);
+        //将自定义的realm交给安全管理器统一调度管理
+        manager.setRealms(Arrays.asList(realm1, realm2));
+        // 自定义session管理 使用redis
+        manager.setSessionManager(sessionManager);
+        return manager;
+    }
+
+    @Bean
+    ShiroFilterFactoryBean shiroFilterFactoryBean(SecurityManager securityManager, UserService userService) {
+        ShiroFilterFactoryBean shiroFilterFactoryBean = new ShiroFilterFactoryBean();
+        
+        // 添加jwt过滤器，/api/** 相关路径直接走jwt过滤器
+        Map<String, Filter> filterMap = new HashMap<>();
+        filterMap.put("jwt", new JWTAuthenticationFilter(userService, "/api/user/login"));
+        shiroFilterFactoryBean.setFilters(filterMap);
+        
+        shiroFilterFactoryBean.setSecurityManager(securityManager);
+        shiroFilterFactoryBean.setLoginUrl("/login");
+        shiroFilterFactoryBean.setSuccessUrl("/index");
+        shiroFilterFactoryBean.setUnauthorizedUrl("/shiro/405");
+        LinkedHashMap<String, String> filterChainDefinitionMap = new LinkedHashMap<>();
+        // 微信对接
+        filterChainDefinitionMap.put("/wx/mp/msg/**", "anon");
+        // api
+        filterChainDefinitionMap.put("/api/user/refresh", "anon");
+        filterChainDefinitionMap.put("/api/**", "jwt");
+        // email
+        filterChainDefinitionMap.put("/emil/**", "anon");
+
+        filterChainDefinitionMap.put("/doc.html**", "anon");
+        filterChainDefinitionMap.put("/swagger-resources/**", "anon");
+        filterChainDefinitionMap.put("/webjars/**", "anon");
+        filterChainDefinitionMap.put("/v2/**", "anon");
+        filterChainDefinitionMap.put("/shiro/**", "anon");
+        filterChainDefinitionMap.put("/login", "anon");
+        filterChainDefinitionMap.put("/css/**", "anon");
+        filterChainDefinitionMap.put("/js/**", "anon");
+        filterChainDefinitionMap.put("/fonts/**", "anon");
+        filterChainDefinitionMap.put("/img/**", "anon");
+        filterChainDefinitionMap.put("/docs/**", "anon");
+        filterChainDefinitionMap.put("/druid/**", "anon");
+        filterChainDefinitionMap.put("/upload/**", "anon");
+        filterChainDefinitionMap.put("/files/**", "anon");
+        filterChainDefinitionMap.put("/test/**", "anon");
+        filterChainDefinitionMap.put("/tt/**", "anon");
+        filterChainDefinitionMap.put("/logout", "logout");
+        filterChainDefinitionMap.put("/", "anon");
+        filterChainDefinitionMap.put("/**", "authc");
+
+        shiroFilterFactoryBean.setFilterChainDefinitionMap(filterChainDefinitionMap);
+        return shiroFilterFactoryBean;
+    }
+
+    //管理shiro bean生命周期
+    @Bean
+    public LifecycleBeanPostProcessor lifecycleBeanPostProcessor() {
+        return new LifecycleBeanPostProcessor();
+    }
+
+    //处理注解不生效问题
+    @Bean
+    public DefaultAdvisorAutoProxyCreator defaultAdvisorAutoProxyCreator() {
+        DefaultAdvisorAutoProxyCreator proxyCreator = new DefaultAdvisorAutoProxyCreator();
+        proxyCreator.setProxyTargetClass(true);
+        return proxyCreator;
+    }
+
+    //配置前台thymeleaf标签
+    @Bean
+    public ShiroDialect shiroDialect() {
+        return new ShiroDialect();
+    }
+
+    //配置shiro注解支持
+    @Bean
+    public AuthorizationAttributeSourceAdvisor authorizationAttributeSourceAdvisor(SecurityManager securityManager) {
+        AuthorizationAttributeSourceAdvisor authorizationAttributeSourceAdvisor = new AuthorizationAttributeSourceAdvisor();
+        authorizationAttributeSourceAdvisor.setSecurityManager(securityManager);
+        return authorizationAttributeSourceAdvisor;
+    }
+
+}
+```
+
+
+
+**实现ehcache和redis缓存动态配置**
+
+主要通过自定义CacheManager接口，从写它的`getCache(String name)`即可
+
+```java
+public class SpringCacheManagerWrapper implements CacheManager {
+
+    @Setter
+    private org.springframework.cache.CacheManager cacheManager;
+
+   @Override
+    public <K, V> Cache<K, V> getCache(String name) throws CacheException {
+        org.springframework.cache.Cache springCache = cacheManager.getCache(name);
+        return new SpringCacheWrapper(springCache);
+    }
+}
+```
+
+
+
+`SpringCacheWrapper`就是实际的缓存处理类
+
+```java
+public class SpringCacheWrapper implements Cache {
+    private final static Logger log = LoggerFactory.getLogger(SpringCacheWrapper.class);
+    private org.springframework.cache.Cache springCache;
+    private boolean isEhcache;
+    private Set<Object> keys;
+
+    SpringCacheWrapper(org.springframework.cache.Cache springCache) {
+        if(log.isDebugEnabled()){
+            log.debug("spring cache Class init：" + springCache.getClass());
+        }
+        this.springCache = springCache;
+        this.isEhcache = springCache.getNativeCache() instanceof Ehcache;
+        if(!this.isEhcache) {
+            keys = new HashSet<>();
+        }
+    }
+
+    @Override
+    public Object get(Object key) throws CacheException {
+        Object value = springCache.get(isEhcache ? key : key.toString());
+        if (value instanceof SimpleValueWrapper) {
+            return ((SimpleValueWrapper) value).get();
+        }
+        return value;
+    }
+
+    @Override
+    public Object put(Object key, Object value) throws CacheException {
+        springCache.put(isEhcache ? key : key.toString(), value);
+        if(!isEhcache) {
+            keys.add(key.toString());
+        }
+        return value;
+    }
+
+    @Override
+    public Object remove(Object key) throws CacheException {
+        springCache.evict(isEhcache ? key : key.toString());
+        if(!isEhcache) {
+            keys.remove(key.toString());
+        }
+        return null;
+    }
+
+    @Override
+    public void clear() throws CacheException {
+        springCache.clear();
+        if(!isEhcache) {
+            keys.clear();
+        }
+    }
+
+    @Override
+    public int size() {
+        if(isEhcache) {
+            Ehcache ehcache = (Ehcache) springCache.getNativeCache();
+            return ehcache.getSize();
+        }else {
+            return keys.size();
+        }
+    }
+
+    @Override
+    public Set keys() {
+        if(isEhcache) {
+            Ehcache ehcache = (Ehcache) springCache.getNativeCache();
+            return new HashSet<Object>(ehcache.getKeys());
+        }else {
+            return keys;
+        }
+    }
+
+    @Override
+    public Collection values() {
+        if (isEhcache) {
+            Ehcache ehcache = (Ehcache) springCache.getNativeCache();
+            List keys = ehcache.getKeys();
+            if (!CollectionUtils.isEmpty(keys)) {
+                List<Object> values = new ArrayList<>(keys.size());
+                for (Object key : keys) {
+                    Object value = get(key);
+                    if (value != null) {
+                        values.add(value);
+                    }
+                }
+                return Collections.unmodifiableList(values);
+            } else {
+                return Collections.emptyList();
+            }
+        } else {
+            List<Object> values = new ArrayList<>(keys.size());
+            for (Object key : keys) {
+                Object value = get(key);
+                values.add(value);
+            }
+            return Collections.unmodifiableCollection(values);
+        }
+    }
+}
+```
+
+在实现类中通过`isEhcache`判断是Ehcache还是redis，从而达到动态配置。
+
+
 
 ### 7.Quartz使用
 
