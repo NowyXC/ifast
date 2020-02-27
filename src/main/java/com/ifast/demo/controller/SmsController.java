@@ -21,7 +21,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/sms")
 public class SmsController {
 
-    @Autowired private SmsManager smsSerevice;
+    @Autowired
+    private SmsManager smsSerevice;
 
 
     @PostMapping("/send")
